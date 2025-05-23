@@ -1,3 +1,5 @@
+console.log("Webhook file loaded, BOT_TOKEN exists:", !!process.env.BOT_TOKEN)
+
 const { Telegraf } = require("telegraf")
 const fs = require("fs")
 const path = require("path")
@@ -5,7 +7,7 @@ const path = require("path")
 // Bot tokenini environment variable dan olish
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
-// Ma'lumotlar fayli yo'li
+// Ma'lumotlar fayli yo'li (Vercel uchun /tmp)
 const PLANS_FILE = path.join("/tmp", "plans.json")
 
 // Ma'lumotlarni yuklash
@@ -35,6 +37,7 @@ const userStates = {}
 
 // Bot buyruqlari
 bot.start((ctx) => {
+  console.log("Start command received from:", ctx.from.id)
   ctx.reply(
     "👋 Salom! Men rejalaringizni eslatib turuvchi botman.\n\n" +
       "Quyidagi buyruqlardan foydalaning:\n" +
@@ -46,11 +49,13 @@ bot.start((ctx) => {
 })
 
 bot.command("add", (ctx) => {
+  console.log("Add command received from:", ctx.from.id)
   userStates[ctx.chat.id] = { state: "WAITING_FOR_TIME" }
   ctx.reply("⏰ Reja vaqtini kiriting (HH:MM formatida):\nMasalan: 09:30, 14:15, 20:00")
 })
 
 bot.command("list", (ctx) => {
+  console.log("List command received from:", ctx.from.id)
   const userId = ctx.from.id
   const plans = loadPlans()
   const userPlans = plans.plans.filter((plan) => plan.userId === userId && plan.active)
@@ -69,6 +74,7 @@ bot.command("list", (ctx) => {
 })
 
 bot.command("delete", (ctx) => {
+  console.log("Delete command received from:", ctx.from.id)
   const userId = ctx.from.id
   const plans = loadPlans()
   const userPlans = plans.plans.filter((plan) => plan.userId === userId && plan.active)
@@ -93,6 +99,7 @@ bot.command("delete", (ctx) => {
 })
 
 bot.command("cancel", (ctx) => {
+  console.log("Cancel command received from:", ctx.from.id)
   if (userStates[ctx.chat.id]) {
     delete userStates[ctx.chat.id]
     ctx.reply("❌ Amal bekor qilindi.")
@@ -105,6 +112,8 @@ bot.command("cancel", (ctx) => {
 bot.on("text", (ctx) => {
   const chatId = ctx.chat.id
   const text = ctx.message.text
+
+  console.log("Text message received:", text, "from:", ctx.from.id)
 
   if (text.startsWith("/")) return
 
@@ -181,10 +190,24 @@ bot.on("text", (ctx) => {
 
 // Webhook handler
 export default async function handler(req, res) {
+  console.log("=== Webhook called ===")
+  console.log("Method:", req.method)
+  console.log("URL:", req.url)
+  console.log("Headers:", req.headers)
+
   try {
     if (req.method === "POST") {
+      console.log("Processing Telegram update:", JSON.stringify(req.body, null, 2))
+
+      // Bot token tekshirish
+      if (!process.env.BOT_TOKEN) {
+        console.error("BOT_TOKEN not found!")
+        return res.status(500).json({ error: "BOT_TOKEN not configured" })
+      }
+
       // Telegram webhook
       await bot.handleUpdate(req.body)
+      console.log("Update processed successfully")
       res.status(200).json({ ok: true })
     } else if (req.method === "GET") {
       // API endpoint - rejalarni olish
@@ -194,7 +217,13 @@ export default async function handler(req, res) {
       res.status(405).json({ error: "Method not allowed" })
     }
   } catch (error) {
-    console.error("Webhook error:", error)
-    res.status(500).json({ error: "Internal server error" })
+    console.error("=== Webhook error ===")
+    console.error("Error:", error)
+    console.error("Stack:", error.stack)
+    res.status(500).json({
+      error: "Internal server error",
+      message: error.message,
+      stack: error.stack,
+    })
   }
 }
