@@ -1,0 +1,11 @@
+{
+    "functions": {
+      "webhook.js": {
+        "maxDuration": 10
+      }
+    },
+    "env": {
+      "BOT_TOKEN": "7656007053:AAGSDJ6LZPj5DEiZEnghrWDwg1_5HQWTGJ8"
+    }
+  }
+  

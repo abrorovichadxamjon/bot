@@ -1,0 +1,12 @@
+{
+  "name": "telegram-reminder-bot-vercel",
+  "version": "1.0.0",
+  "description": "Telegram reminder bot for Vercel",
+  "main": "webhook.js",
+  "scripts": {
+    "start": "node webhook.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.15.3"
+  }
+}
